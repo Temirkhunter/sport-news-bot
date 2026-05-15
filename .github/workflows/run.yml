@@ -1,0 +1,86 @@
+name: Sport News Bot
+
+on:
+  schedule:
+    # Каждые 5 минут. GitHub Actions cron — UTC, минимальная гранулярность 5 мин.
+    - cron: "*/5 * * * *"
+  workflow_dispatch:   # Возможность запустить вручную через UI «Run workflow»
+
+# Если предыдущий запуск ещё идёт — текущий ждёт, не запускаемся параллельно
+# (важно: иначе будут гонки за commit posts.db).
+concurrency:
+  group: bot-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # Нужно для git push с обновлённым data/posts.db
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run one cycle
+        env:
+          # Telegram (публикация)
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_TARGET_CHANNEL: ${{ secrets.TG_TARGET_CHANNEL }}
+          # OpenRouter
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL || 'openai/gpt-oss-120b:free' }}
+          OPENROUTER_FALLBACK_MODEL: ${{ vars.OPENROUTER_FALLBACK_MODEL || 'z-ai/glm-4.5-air:free' }}
+          OPENROUTER_PAID_FALLBACK_MODEL: ${{ vars.OPENROUTER_PAID_FALLBACK_MODEL || 'deepseek/deepseek-chat' }}
+          # Опциональные провайдеры картинок
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          # Поведение
+          MAX_POSTS_PER_RUN: ${{ vars.MAX_POSTS_PER_RUN || '3' }}
+          MAX_POST_AGE_HOURS: ${{ vars.MAX_POST_AGE_HOURS || '6' }}
+          POST_DELAY_SECONDS: ${{ vars.POST_DELAY_SECONDS || '30' }}
+          DRY_RUN: ${{ vars.DRY_RUN || 'false' }}
+          LOG_LEVEL: INFO
+        run: python -m src.main --once
+
+      - name: Persist dedup DB
+        if: always()
+        run: |
+          git config user.name  "sport-news-bot[bot]"
+          git config user.email "actions@users.noreply.github.com"
+          # Защита от пустого diff (когда новых постов не было)
+          if [[ -n "$(git status --porcelain data/posts.db)" ]]; then
+            git add data/posts.db
+            git commit -m "chore: update dedup state [skip ci]"
+            # Retry push на случай гонки с другим хвостовым запуском
+            for i in 1 2 3; do
+              git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && \
+              git push origin HEAD:"${GITHUB_REF_NAME}" && break
+              sleep 2
+            done
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Upload usage log as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: usage-${{ github.run_id }}
+          path: data/usage.jsonl
+          retention-days: 30
+          if-no-files-found: ignore

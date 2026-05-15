@@ -1,0 +1,125 @@
+# Самые быстрые источники футбольных новостей в мире.
+# Реддит и Sky Sports обычно публикуют breaking-новости первыми (трансферы, увольнения).
+# Все RSS опрашиваются параллельно каждые CHECK_INTERVAL_MINUTES минут.
+
+telegram:
+  # Все отключены — нет авторизованной Telethon-сессии.
+  # Чтобы включить: 1) пройти --init-telegram-session, 2) поставить enabled: true.
+  - name: eldar_amanvibe
+    channel: "@eldar_amanvibe"
+    enabled: false
+  - name: football_transfer
+    channel: "@football_transfer"
+    enabled: false
+  - name: goalkz_official
+    channel: "@goalkz_official"
+    enabled: false
+
+vk:
+  - name: goalkz_official
+    domain: goalkz_official
+    enabled: true
+  - name: kpl_2017
+    domain: kpl_2017
+    enabled: true
+
+web:
+  # --- Самые быстрые англоязычные источники ---
+  - name: reddit_soccer
+    url: "https://www.reddit.com/r/soccer/.rss"
+    keywords: []
+    enabled: true
+  - name: bbc_sport_football
+    url: "http://feeds.bbci.co.uk/sport/football/rss.xml"
+    keywords: []
+    enabled: true
+  - name: sky_sports_football
+    url: "https://www.skysports.com/rss/12040"
+    keywords: []
+    enabled: true
+  - name: sky_sports_premier_league
+    url: "https://www.skysports.com/rss/11661"
+    keywords: []
+    enabled: true
+  - name: guardian_football
+    url: "https://www.theguardian.com/football/rss"
+    keywords: []
+    enabled: true
+  - name: espn_soccer
+    url: "https://www.espn.com/espn/rss/soccer/news"
+    keywords: []
+    enabled: true
+  - name: goal_com
+    url: "https://www.goal.com/feeds/en/news"
+    keywords: []
+    enabled: true
+  - name: football365
+    url: "https://www.football365.com/feed"
+    keywords: []
+    enabled: true
+  - name: 90min
+    url: "https://www.90min.com/posts.rss"
+    keywords: []
+    enabled: true
+  - name: dailymail_football
+    url: "https://www.dailymail.co.uk/sport/football/index.rss"
+    keywords: []
+    enabled: true
+  - name: mirror_football
+    url: "https://www.mirror.co.uk/sport/football/rss.xml"
+    keywords: []
+    enabled: true
+  - name: givemesport
+    url: "https://www.givemesport.com/feed/"
+    keywords: ["football", "soccer", "premier league", "champions league"]
+    enabled: true
+  - name: marca_football_intl
+    url: "https://e00-marca.uecdn.es/rss/futbol/futbol-internacional.xml"
+    keywords: []
+    enabled: true
+  - name: as_english_football
+    url: "https://en.as.com/rss/futbol/portada.xml"
+    keywords: []
+    enabled: true
+  - name: dailymail_bundesliga
+    url: "https://www.dailymail.co.uk/sport/bundesliga/index.rss"
+    keywords: []
+    enabled: true
+  - name: dailymail_serie_a
+    url: "https://www.dailymail.co.uk/sport/serieafootball/index.rss"
+    keywords: []
+    enabled: true
+  - name: dailymail_la_liga
+    url: "https://www.dailymail.co.uk/sport/laligafootball/index.rss"
+    keywords: []
+    enabled: true
+
+  # --- Русскоязычные ---
+  - name: sports_ru_football
+    url: "https://www.sports.ru/rss/football.xml"
+    keywords: []
+    enabled: true
+  - name: sports_ru_main
+    url: "https://www.sports.ru/rss/main.xml"
+    keywords: ["футбол", "матч", "гол", "лига", "клуб", "тренер", "трансфер"]
+    enabled: true
+  - name: championat_football
+    url: "https://www.championat.com/rss/football/0/news.xml"
+    keywords: []
+    enabled: true
+  - name: sport_express_football
+    url: "https://www.sport-express.ru/services/materials/news/se/football/"
+    keywords: []
+    enabled: true
+  - name: sportbox_football
+    url: "https://news.sportbox.ru/rss/sports/football.xml"
+    keywords: []
+    enabled: true
+  - name: ria_football
+    url: "https://rsport.ria.ru/export/rss2/football/index.xml"
+    keywords: []
+    enabled: true
+  - name: tass_sport
+    url: "https://tass.ru/rss/v2.xml?sections=MjQ%3D"
+    keywords: ["футбол", "матч", "гол", "лига", "клуб", "трансфер"]
+    enabled: true

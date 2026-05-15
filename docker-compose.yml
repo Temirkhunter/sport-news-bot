@@ -1,0 +1,13 @@
+services:
+  sport-news-bot:
+    build: .
+    container_name: sport-news-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./sessions:/app/sessions
+      - ./config:/app/config:ro
+    stop_grace_period: 60s
