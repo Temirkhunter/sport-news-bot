@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from sqlalchemy import and_, select
 
@@ -66,6 +66,47 @@ def create_pending(
         s.add(post)
         s.commit()
         return post.id
+
+
+def get_recent_originals(hours: int = 48, limit: int = 200) -> List[Tuple[int, str]]:
+    """Возвращает [(id, original_text)] публикаций за последние N часов."""
+    cutoff = datetime.utcnow() - timedelta(hours=hours)
+    with get_session() as s:
+        stmt = (
+            select(ProcessedPost.id, ProcessedPost.original_text)
+            .where(
+                and_(
+                    ProcessedPost.created_at >= cutoff,
+                    ProcessedPost.original_text.isnot(None),
+                )
+            )
+            .order_by(ProcessedPost.created_at.desc())
+            .limit(limit)
+        )
+        return [(row[0], row[1] or "") for row in s.execute(stmt)]
+
+
+def exists_event_key(event_key: str, hours: int = 24) -> bool:
+    """Был ли пост с таким event_key за последние N часов (любой статус)."""
+    if not event_key:
+        return False
+    cutoff = datetime.utcnow() - timedelta(hours=hours)
+    with get_session() as s:
+        stmt = select(ProcessedPost.id).where(
+            and_(
+                ProcessedPost.event_key == event_key,
+                ProcessedPost.created_at >= cutoff,
+            )
+        ).limit(1)
+        return s.execute(stmt).first() is not None
+
+
+def set_event_key(post_id: int, event_key: str) -> None:
+    with get_session() as s:
+        post = s.get(ProcessedPost, post_id)
+        if post:
+            post.event_key = event_key
+            s.commit()
 
 
 def mark_published(post_id: int, rewritten_text: str, image_path: Optional[str]) -> None:

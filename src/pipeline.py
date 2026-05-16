@@ -100,8 +100,13 @@ async def process_post(
     publisher: TelegramPublisher,
 ) -> bool:
     """Полный путь одного поста. Возвращает True если опубликован."""
+    # 1) Точный дубль (external_id или SHA256 нормализованного текста)
     if deduplicator.is_duplicate(post):
         logger.debug("Duplicate skipped: {}/{}/{}", post.source_type, post.source_id, post.external_id)
+        return False
+
+    # 2) Семантический дубль (та же новость другими словами из другого источника) — до LLM
+    if deduplicator.is_semantic_duplicate(post):
         return False
 
     chash = deduplicator.content_hash(post.text)
@@ -128,6 +133,14 @@ async def process_post(
         logger.error("Rewriter unexpected error: {}", e)
         repository.mark_failed(post_id, str(e))
         return False
+
+    # 3) Семантический дубль по event_key — после LLM, последняя линия защиты
+    if result.event_key and repository.exists_event_key(result.event_key, hours=24):
+        logger.info("🚫 Dedup by event_key: '{}' already seen in last 24h", result.event_key)
+        repository.mark_failed(post_id, f"dup_event_key:{result.event_key}")
+        return False
+    if result.event_key:
+        repository.set_event_key(post_id, result.event_key)
 
     # Эвристика: если в посте упоминаются имена людей — избегаем AI-портретов
     avoid_portraits = bool(NAME_HINT_RE.search(result.text))

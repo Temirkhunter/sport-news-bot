@@ -43,10 +43,32 @@ class RewriteResult(BaseModel):
     teams: List[str] = Field(default_factory=list)
     category: str = Field(default="football")
     is_breaking: bool = Field(default=False)
+    event_key: str = Field(default="", max_length=120)
 
 
 class RewriterError(Exception):
     pass
+
+
+# Допустимая доля латиницы в опубликованном русском тексте.
+# Считаем что HTML-теги <b>, <i> и имена собственных могут давать до ~12% латиницы.
+MAX_LATIN_RATIO = 0.18
+
+
+def _latin_ratio(text: str) -> float:
+    """Доля латинских букв среди всех букв в тексте."""
+    # Уберём HTML-теги перед оценкой
+    cleaned = re.sub(r"<[^>]+>", "", text)
+    cyr = sum(1 for c in cleaned if "а" <= c.lower() <= "я" or c.lower() == "ё")
+    lat = sum(1 for c in cleaned if "a" <= c.lower() <= "z")
+    total = cyr + lat
+    if total < 50:
+        return 0.0
+    return lat / total
+
+
+def _looks_english(text: str) -> bool:
+    return _latin_ratio(text) > MAX_LATIN_RATIO
 
 
 def _extract_json_block(raw: str) -> str:
@@ -115,9 +137,19 @@ async def _try_one_model(
     except json.JSONDecodeError as e:
         raise RewriterError(f"invalid json from {model}: {e}; raw={raw[:160]}") from e
     try:
-        return RewriteResult.model_validate(parsed)
+        result = RewriteResult.model_validate(parsed)
     except ValidationError as e:
         raise RewriterError(f"validation failed for {model}: {e}") from e
+
+    # Russian-only: если модель скатилась в английский — отбрасываем
+    if _looks_english(result.text):
+        ratio = _latin_ratio(result.text)
+        raise RewriterError(
+            f"output too english (latin_ratio={ratio:.2f}) from {model}; "
+            f"sample={result.text[:120]}"
+        )
+
+    return result
 
 
 async def rewrite(original_text: str, source: str) -> RewriteResult:
